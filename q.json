@@ -1,0 +1,42 @@
+[
+  {
+    "template": "What is the actual value of {percent} of {letter}?",
+    "type": "valueOfPercent",
+    "variables": ["percent", "letter"]
+  },
+  {
+    "template": "Which letter has the highest actual value of {percent}?",
+    "type": "highestPercentValue",
+    "variables": ["percent"]
+  },
+  {
+    "template": "Which letter has the lowest actual value of {percent}?",
+    "type": "lowestPercentValue",
+    "variables": ["percent"]
+  },
+  {
+    "template": "What is the average of {number} across all letters?",
+    "type": "averageOfNumber",
+    "variables": ["number"]
+  },
+  {
+    "template": "Which letter has the biggest total sum between 1 and 2?",
+    "type": "highestTotalSum",
+    "variables": []
+  },
+  {
+    "template": "Which letter has the lowest total sum between 1 and 2?",
+    "type": "lowestTotalSum",
+    "variables": []
+  },
+  {
+    "template": "What is the average of 1 and 2 for {letter}?",
+    "type": "averageOfLetter",
+    "variables": ["letter"]
+  },
+  {
+    "template": "What is the percentage contribution of {letter} towards the sum of {number}?",
+    "type": "percentageContribution",
+    "variables": ["letter", "number"]
+  }
+]

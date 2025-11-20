@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Randomized Table</title>
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div id="table-container">
+        <div id="note">1 & 2 are time differentiated values of their respective letter.<br>X & Y are percentile distribution of their respective number.</div>
+        <div id="table"></div>
+      </div>
+      <div class="questions"></div>
+      <div class="answer">
+        <input type="text" id="answerInput" placeholder="Your answer">
+        <button id="submitAnswerButton">Check Answer</button>
+        <span id="feedback"></span>
+      </div>
+      <div id="buttons">
+        <button id="answerButton">Show Answer</button>
+        <button id="questionButton">Change Question</button>
+        <button id="randomizeButton">Randomize Data</button>
+      </div>
+      <div id="infos">
+        <div id="last-time">Last time spent : 00:00</div>
+        <div id="total-time">Total time spent : 00:00</div>
+        <div id="score">Score : 0/0</div>
+      </div>
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>
