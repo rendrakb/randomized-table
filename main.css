@@ -5,20 +5,17 @@ body {
   flex-direction: column;
   min-height: 100vh;
   min-width: 100vw;
-  background-color: #4c4c4c;
+  background-color: #1a1a1a;
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   color: white;
 }
 
-#answerButton,
-#questionButton,
-#randomizeButton {
-  margin: 20px 10px;
-}
-
 .questions {
-  margin: 20px;
+  padding: 20px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  min-height: 60px;
 }
 
 #table {
@@ -26,25 +23,31 @@ body {
   flex-direction: column;
   align-items: center;
   margin-top: 20px;
-  margin-bottom: 50px;
+  margin-bottom: 20px;
 }
 
 table {
-    border-collapse: collapse;
-    width: 90vw;
-    text-align: center;
-    font-size: 0.8em;
-  }
-  th, td {
-    padding-top: 20px;
-    padding-bottom: 20px;
-    border: 1px solid #1c1c1c;
-  }
+  border-collapse: collapse;
+  width: 90vw;
+  text-align: center;
+  font-size: 0.8em;
+  background: #2a2a2a;
+  max-width: 500px;
+}
+
+th,
+td {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  border: 1px solid #1c1c1c;
+}
+
+th {
+  background: #333;
+  font-weight: bold;
+}
 
 #infos {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   gap: 20px;
   margin-top: 20px;
   font-size: 1em;
@@ -54,4 +57,44 @@ table {
   font-size: 0.6em;
   margin-top: 20px;
   margin-bottom: 20px;
+}
+
+button {
+  padding: 5px 10px;
+  margin: 10px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+button:hover {
+  background: #357abd;
+}
+
+#answerInput {
+  padding: 3px;
+  margin-right: 10px;
+  font-size: 1em;
+  width: 150px;
+  background: #333;
+  border: 1px solid #555;
+  color: #fff;
+  border-radius: 4px;
+}
+
+#feedback {
+  font-weight: bold;
+} 
+
+#last-time,
+#total-time,
+#score {
+  background: #2a2a2a;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
