@@ -1,1 +1,1 @@
-A little tool to train rapid chart reading
+A little tool to train rapid table reading
