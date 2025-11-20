@@ -243,7 +243,7 @@ document.getElementById("submitAnswerButton").addEventListener("click", () => {
   lastSubmitTime = now;
 
   if (isCorrect) {
-    feedback.textContent = "Correct!";
+    feedback.textContent = "Correct.";
     feedback.style.color = "lightgreen";
   } else {
     feedback.textContent = `Wrong, it's: ${currentAnswer}`;
