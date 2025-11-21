@@ -246,7 +246,7 @@ document.getElementById("submitAnswerButton").addEventListener("click", () => {
     feedback.textContent = "Correct.";
     feedback.style.color = "lightgreen";
   } else {
-    feedback.textContent = `Wrong, it's: ${currentAnswer}`;
+    feedback.textContent = "Wrong";
     feedback.style.color = "red";
   }
 });
