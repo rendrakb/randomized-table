@@ -1,273 +1,510 @@
-const names = ["A", "B", "C", "D"];
-let tableData = [];
-let questionTemplates = [];
-let currentQuestion = null;
-let currentAnswer = null;
-let pageStartTime = Date.now();
-let lastSubmitTime = null;
-let correctCount = 0;
-let totalAttempts = 0;
+const CONFIG = {
+  TABLE: {
+    NAMES: ['A', 'B', 'C', 'D'],
+    NUMBER_COLUMNS: ['1', '2'],
+    PERCENT_COLUMNS: ['x1', 'y1', 'x2', 'y2'],
+    MAX_VALUE: 1000,
+    MAX_PERCENT: 100,
+  },
+  HEADERS: [
+    'Name',
+    '1',
+    'X1<br>(%)',
+    'Y1<br>(%)',
+    '2',
+    'X2<br>(%)',
+    'Y2<br>(%)',
+  ],
+  COLORS: {
+    CORRECT: 'lightgreen',
+    INCORRECT: 'red',
+  },
+};
 
-fetch("q.json")
-  .then((res) => res.json())
-  .then((data) => {
-    questionTemplates = data;
-    generateQuestion();
-  })
-  .catch((err) => {
-    console.error("Error loading q.json:", err);
-    alert("Could not load q.json.");
-  });
+const state = {
+  tableData: [],
+  questionTemplates: [],
+  currentQuestion: null,
+  currentAnswer: null,
+  pageStartTime: Date.now(),
+  lastSubmitTime: null,
+  correctCount: 0,
+  totalAttempts: 0,
+};
 
-function randomizeTableData() {
-  tableData = names.map((name) => {
-    const x1 = Math.floor(Math.random() * 101);
-    const x2 = Math.floor(Math.random() * 101);
-    return {
+class TableDataManager {
+  constructor() {
+    this.data = [];
+  }
+
+  randomize() {
+    this.data = CONFIG.TABLE.NAMES.map((name) => {
+      const x1 = Math.floor(Math.random() * (CONFIG.TABLE.MAX_PERCENT + 1));
+      const x2 = Math.floor(Math.random() * (CONFIG.TABLE.MAX_PERCENT + 1));
+
+      return {
+        name,
+        '1': Math.floor(Math.random() * CONFIG.TABLE.MAX_VALUE),
+        x1,
+        y1: CONFIG.TABLE.MAX_PERCENT - x1,
+        '2': Math.floor(Math.random() * CONFIG.TABLE.MAX_VALUE),
+        x2,
+        y2: CONFIG.TABLE.MAX_PERCENT - x2,
+      };
+    });
+
+    return this.data;
+  }
+
+  getValue(letter, column) {
+    const row = this.data.find((r) => r.name === letter);
+    return row ? row[column] : 0;
+  }
+
+  getData() {
+    return this.data;
+  }
+
+  getAllNames() {
+    return CONFIG.TABLE.NAMES;
+  }
+}
+
+class TableRenderer {
+  constructor(containerId) {
+    this.container = document.getElementById(containerId);
+  }
+
+  render(data) {
+    const table = this.buildTable(data);
+    this.container.innerHTML = table;
+  }
+
+  buildTable(data) {
+    const headerRow = this.buildHeaderRow();
+    const bodyRows = this.buildBodyRows(data);
+
+    return `
+      <table>
+        <thead>
+          ${headerRow}
+        </thead>
+        <tbody>
+          ${bodyRows}
+        </tbody>
+      </table>
+    `;
+  }
+
+  buildHeaderRow() {
+    const headers = CONFIG.HEADERS.map((h) => `<th>${h}</th>`).join('');
+    return `<tr>${headers}</tr>`;
+  }
+
+  buildBodyRows(data) {
+    return data
+      .map((row) => {
+        const cells = `
+          <td>${row.name}</td>
+          <td>${row['1']}</td>
+          <td>${row.x1}</td>
+          <td>${row.y1}</td>
+          <td>${row['2']}</td>
+          <td>${row.x2}</td>
+          <td>${row.y2}</td>
+        `;
+        return `<tr>${cells}</tr>`;
+      })
+      .join('');
+  }
+}
+
+class QuestionGenerator {
+  constructor(dataManager) {
+    this.dataManager = dataManager;
+  }
+
+  static pickRandom(array) {
+    return array[Math.floor(Math.random() * array.length)];
+  }
+
+  generateVariables(variableNames) {
+    const vars = {};
+
+    variableNames.forEach((varName) => {
+      if (varName.startsWith('letter')) {
+        vars[varName] = QuestionGenerator.pickRandom(CONFIG.TABLE.NAMES);
+      }
+      if (varName === 'number') {
+        vars[varName] = QuestionGenerator.pickRandom(
+          CONFIG.TABLE.NUMBER_COLUMNS
+        );
+      }
+      if (varName === 'percent') {
+        vars[varName] = QuestionGenerator.pickRandom(
+          CONFIG.TABLE.PERCENT_COLUMNS
+        );
+      }
+    });
+
+    if (vars.letterA && vars.letterB && vars.letterA === vars.letterB) {
+      vars.letterB = CONFIG.TABLE.NAMES.find((c) => c !== vars.letterA);
+    }
+
+    return vars;
+  }
+
+  calculateAnswer(type, vars) {
+    switch (type) {
+      case 'valueOfPercent':
+        return this.calculateValueOfPercent(vars);
+
+      case 'highestPercentValue':
+        return this.findHighestPercentValue(vars);
+
+      case 'lowestPercentValue':
+        return this.findLowestPercentValue(vars);
+
+      case 'averageOfNumber':
+        return this.calculateAverageOfNumber(vars);
+
+      case 'highestTotalSum':
+        return this.findHighestTotalSum();
+
+      case 'lowestTotalSum':
+        return this.findLowestTotalSum();
+
+      case 'averageOfLetter':
+        return this.calculateAverageOfLetter(vars);
+
+      case 'percentageContribution':
+        return this.calculatePercentageContribution(vars);
+
+      default:
+        console.warn(`Unknown question type: ${type}`);
+        return null;
+    }
+  }
+
+  calculateValueOfPercent(vars) {
+    const percentValue = this.dataManager.getValue(vars.letter, vars.percent);
+    const baseColumn = this.getBaseColumnForPercent(vars.percent);
+    const baseValue = this.dataManager.getValue(vars.letter, baseColumn);
+    return Math.round((percentValue / 100) * baseValue);
+  }
+
+  getBaseColumnForPercent(percentColumn) {
+    if (
+      percentColumn.startsWith('x') ||
+      percentColumn.startsWith('y')
+    ) {
+      return percentColumn.charAt(percentColumn.length - 1);
+    }
+    return '1';
+  }
+
+  findHighestPercentValue(vars) {
+    const values = this.calculatePercentValuesForAll(vars.percent);
+    values.sort((a, b) => b.value - a.value);
+    return values[0].name;
+  }
+
+  findLowestPercentValue(vars) {
+    const values = this.calculatePercentValuesForAll(vars.percent);
+    values.sort((a, b) => a.value - b.value);
+    return values[0].name;
+  }
+
+  calculatePercentValuesForAll(percentColumn) {
+    return CONFIG.TABLE.NAMES.map((name) => {
+      const percentValue = this.dataManager.getValue(name, percentColumn);
+      const baseColumn = this.getBaseColumnForPercent(percentColumn);
+      const baseValue = this.dataManager.getValue(name, baseColumn);
+      return {
+        name,
+        value: Math.round((percentValue / 100) * baseValue),
+      };
+    });
+  }
+
+  calculateAverageOfNumber(vars) {
+    const sum = CONFIG.TABLE.NAMES.reduce(
+      (total, name) => total + this.dataManager.getValue(name, vars.number),
+      0
+    );
+    return Math.round(sum / CONFIG.TABLE.NAMES.length);
+  }
+
+  findHighestTotalSum() {
+    const totals = this.calculateTotalSums();
+    totals.sort((a, b) => b.total - a.total);
+    return totals[0].name;
+  }
+
+  findLowestTotalSum() {
+    const totals = this.calculateTotalSums();
+    totals.sort((a, b) => a.total - b.total);
+    return totals[0].name;
+  }
+
+  calculateTotalSums() {
+    return CONFIG.TABLE.NAMES.map((name) => ({
       name,
-      1: Math.floor(Math.random() * 1000),
-      x1,
-      y1: 100 - x1,
-      2: Math.floor(Math.random() * 1000),
-      x2,
-      y2: 100 - x2,
+      total:
+        this.dataManager.getValue(name, '1') +
+        this.dataManager.getValue(name, '2'),
+    }));
+  }
+
+  calculateAverageOfLetter(vars) {
+    const val1 = this.dataManager.getValue(vars.letter, '1');
+    const val2 = this.dataManager.getValue(vars.letter, '2');
+    return Math.round((val1 + val2) / 2);
+  }
+
+  calculatePercentageContribution(vars) {
+    const letterValue = this.dataManager.getValue(vars.letter, vars.number);
+    const totalOfColumn = CONFIG.TABLE.NAMES.reduce(
+      (sum, name) => sum + this.dataManager.getValue(name, vars.number),
+      0
+    );
+
+    if (totalOfColumn === 0) return '0%';
+
+    const percentage = Math.round((letterValue / totalOfColumn) * 100);
+    return `${percentage}%`;
+  }
+
+  generate() {
+    if (!state.questionTemplates.length || !this.dataManager.getData().length) {
+      console.warn('Cannot generate question: missing templates or data');
+      return null;
+    }
+
+    const template = QuestionGenerator.pickRandom(state.questionTemplates);
+    const variables = this.generateVariables(template.variables);
+    const answer = this.calculateAnswer(template.type, variables);
+
+    let questionText = template.template;
+    Object.entries(variables).forEach(([key, value]) => {
+      questionText = questionText.replace(`{${key}}`, value);
+    });
+
+    state.currentQuestion = questionText;
+    state.currentAnswer = answer;
+
+    return { question: questionText, answer };
+  }
+}
+
+class UIController {
+  constructor() {
+    this.elements = {
+      questionDisplay: document.querySelector('.questions'),
+      answerInput: document.getElementById('answerInput'),
+      feedback: document.getElementById('feedback'),
+      answerDiv: null,
+      score: document.getElementById('score'),
+      lastTime: document.getElementById('last-time'),
+      totalTime: document.getElementById('total-time'),
     };
-  });
-  renderTable(tableData);
-}
-
-function renderTable(data) {
-  const headers = [
-    "Name",
-    "1",
-    "X1<br>(%)",
-    "Y1<br>(%)",
-    "2",
-    "X2<br>(%)",
-    "Y2<br>(%)",
-  ];
-  let html = `<table><thead><tr>`;
-  headers.forEach((h) => {
-    html += `<th>${h}</th>`;
-  });
-  html += `</tr></thead><tbody>`;
-
-  data.forEach((row) => {
-    html += `<tr><td>${row.name}</td><td>${row["1"]}</td><td>${row.x1}</td><td>${row.y1}</td><td>${row["2"]}</td><td>${row.x2}</td><td>${row.y2}</td></tr>`;
-  });
-
-  html += `</tbody></table>`;
-  document.getElementById("table").innerHTML = html;
-}
-
-function getValue(letter, column) {
-  const row = tableData.find((r) => r.name === letter);
-  return row ? row[column] : 0;
-}
-
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-const columns = ["1", "x1", "y1", "2", "x2", "y2"];
-
-function generateQuestion() {
-  if (!questionTemplates.length || !tableData.length) return;
-
-  const templateObj = pick(questionTemplates);
-  const vars = {};
-
-  const numbers = ["1", "2"];
-  const percents = ["x1", "y1", "x2", "y2"];
-
-  templateObj.variables.forEach((v) => {
-    if (v.startsWith("letter")) vars[v] = pick(names);
-    if (v === "number") vars[v] = pick(numbers);
-    if (v === "percent") vars[v] = pick(percents);
-  });
-
-  if (vars.letterA === vars.letterB) {
-    vars.letterB = names.find((c) => c !== vars.letterA);
   }
 
-  switch (templateObj.type) {
-    case "valueOfPercent":
-      const percentValue = getValue(vars.letter, vars.percent);
-      const baseColumn =
-        vars.percent.startsWith("x") || vars.percent.startsWith("y")
-          ? vars.percent.charAt(vars.percent.length - 1)
-          : "1";
-      const baseValue = getValue(vars.letter, baseColumn);
-      currentAnswer = Math.round((percentValue / 100) * baseValue);
-      break;
-    case "highestPercentValue":
-      const highestPercent = names.map((name) => {
-        const pVal = getValue(name, vars.percent);
-        const bCol =
-          vars.percent.startsWith("x") || vars.percent.startsWith("y")
-            ? vars.percent.charAt(vars.percent.length - 1)
-            : "1";
-        const bVal = getValue(name, bCol);
-        return {
-          name: name,
-          value: Math.round((pVal / 100) * bVal),
-        };
-      });
-      highestPercent.sort((a, b) => b.value - a.value);
-      currentAnswer = highestPercent[0].name;
-      break;
-    case "lowestPercentValue":
-      const lowestPercent = names.map((name) => {
-        const pVal = getValue(name, vars.percent);
-        const bCol =
-          vars.percent.startsWith("x") || vars.percent.startsWith("y")
-            ? vars.percent.charAt(vars.percent.length - 1)
-            : "1";
-        const bVal = getValue(name, bCol);
-        return {
-          name: name,
-          value: Math.round((pVal / 100) * bVal),
-        };
-      });
-      lowestPercent.sort((a, b) => a.value - b.value);
-      currentAnswer = lowestPercent[0].name;
-      break;
-    case "averageOfNumber":
-      const sumOfNumber = names.reduce(
-        (sum, name) => sum + getValue(name, vars.number),
-        0
-      );
-      currentAnswer = Math.round(sumOfNumber / names.length);
-      break;
-    case "highestTotalSum":
-      const totalsHigh = names.map((name) => ({
-        name: name,
-        total: getValue(name, "1") + getValue(name, "2"),
-      }));
-      totalsHigh.sort((a, b) => b.total - a.total);
-      currentAnswer = totalsHigh[0].name;
-      break;
-    case "lowestTotalSum":
-      const totalsLow = names.map((name) => ({
-        name: name,
-        total: getValue(name, "1") + getValue(name, "2"),
-      }));
-      totalsLow.sort((a, b) => a.total - b.total);
-      currentAnswer = totalsLow[0].name;
-      break;
-    case "averageOfLetter":
-      const val1 = getValue(vars.letter, "1");
-      const val2 = getValue(vars.letter, "2");
-      currentAnswer = Math.round((val1 + val2) / 2);
-      break;
-    case "percentageContribution":
-      const letterValue = getValue(vars.letter, vars.number);
-      const totalOfColumn = names.reduce(
-        (sum, name) => sum + getValue(name, vars.number),
-        0
-      );
-      currentAnswer = totalOfColumn
-        ? Math.round((letterValue / totalOfColumn) * 100) + "%"
-        : "0%";
-      break;
+  displayQuestion(question, answer) {
+    this.elements.questionDisplay.innerHTML = `
+      <strong>${question}</strong><br>
+      <div id="answer" style="display:none;">Answer: ${answer}</div>
+    `;
+    this.clearInput();
+    this.clearFeedback();
+    this.updateAnswerElement();
   }
 
-  currentQuestion = templateObj.template;
-  Object.entries(vars).forEach(([key, val]) => {
-    currentQuestion = currentQuestion.replace(`{${key}}`, val);
-  });
+  updateAnswerElement() {
+    this.elements.answerDiv = document.getElementById('answer');
+  }
 
-  document.querySelector(
-    ".questions"
-  ).innerHTML = `<strong>${currentQuestion}</strong><br><div id="answer" style="display:none;">Answer: ${currentAnswer}</div>`;
+  clearInput() {
+    this.elements.answerInput.value = '';
+  }
 
-  document.getElementById("answerInput").value = "";
-  document.getElementById("feedback").textContent = "";
-  document.getElementById("feedback").style.color = "";
+  clearFeedback() {
+    this.elements.feedback.textContent = '';
+    this.elements.feedback.style.color = '';
+  }
+
+  showAnswer() {
+    if (this.elements.answerDiv) {
+      this.elements.answerDiv.style.display = 'block';
+    }
+  }
+
+  showFeedback(isCorrect) {
+    this.elements.feedback.textContent = isCorrect ? 'Correct.' : 'Wrong';
+    this.elements.feedback.style.color = isCorrect
+      ? CONFIG.COLORS.CORRECT
+      : CONFIG.COLORS.INCORRECT;
+  }
+
+  updateScore() {
+    this.elements.score.textContent = `Score: ${state.correctCount}/${state.totalAttempts}`;
+  }
+
+  updateLastTime(seconds) {
+    this.elements.lastTime.textContent = `Last time spent: ${this.formatTime(
+      seconds
+    )}`;
+  }
+
+  updateTotalTime() {
+    const totalSeconds = (Date.now() - state.pageStartTime) / 1000;
+    this.elements.totalTime.textContent = `Total time spent: ${this.formatTime(
+      totalSeconds
+    )}`;
+  }
+
+  formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(
+      2,
+      '0'
+    )}`;
+  }
+
+  getUserAnswer() {
+    return this.elements.answerInput.value;
+  }
 }
 
-document.getElementById("questionButton").addEventListener("click", () => {
-  generateQuestion();
-});
+class AnswerValidator {
+  static normalize(answer) {
+    if (answer == null) return '';
 
-document.getElementById("answerButton").addEventListener("click", () => {
-  const answerDiv = document.getElementById("answer");
-  if (answerDiv) {
-    answerDiv.style.display = "block";
-  }
-});
+    let normalized = String(answer).trim().toLowerCase();
+    normalized = normalized.replace(/,/g, '');
 
-document.getElementById("randomizeButton").addEventListener("click", () => {
-  randomizeTableData();
-  generateQuestion();
-});
+    if (normalized.endsWith('%')) {
+      const num = parseFloat(normalized.replace('%', ''));
+      if (isNaN(num)) return normalized;
+      return `${Math.abs(num)}%`;
+    }
 
-function normalizeAnswer(ans) {
-  if (ans == null) return "";
-  ans = String(ans).trim().toLowerCase();
-  ans = ans.replace(/,/g, "");
+    const num = parseFloat(normalized);
+    if (!isNaN(num)) return Math.abs(num);
 
-  if (ans.endsWith("%")) {
-    let num = parseFloat(ans.replace("%", ""));
-    if (isNaN(num)) return ans;
-    return Math.abs(num) + "%";
+    return normalized;
   }
 
-  let num = parseFloat(ans);
-  if (!isNaN(num)) return Math.abs(num);
-
-  return ans;
+  static isCorrect(userAnswer, correctAnswer) {
+    const normalizedUser = this.normalize(userAnswer);
+    const normalizedCorrect = this.normalize(correctAnswer);
+    return normalizedUser === normalizedCorrect;
+  }
 }
 
-document.getElementById("submitAnswerButton").addEventListener("click", () => {
-  const userInput = document.getElementById("answerInput").value;
-  const feedback = document.getElementById("feedback");
-
-  const user = normalizeAnswer(userInput);
-  const correct = normalizeAnswer(currentAnswer);
-
-  totalAttempts++;
-  let isCorrect = user === correct;
-  if (isCorrect) correctCount++;
-
-  document.getElementById(
-    "score"
-  ).textContent = `Score: ${correctCount}/${totalAttempts}`;
-
-  const now = Date.now();
-  if (lastSubmitTime) {
-    const diffSec = (now - lastSubmitTime) / 1000;
-    document.getElementById("last-time").textContent =
-      "Last time spent: " + formatTime(diffSec);
+class QuizApp {
+  constructor() {
+    this.dataManager = new TableDataManager();
+    this.tableRenderer = new TableRenderer('table');
+    this.questionGenerator = new QuestionGenerator(this.dataManager);
+    this.uiController = new UIController();
+    this.initialize();
   }
-  lastSubmitTime = now;
 
-  if (isCorrect) {
-    feedback.textContent = "Correct.";
-    feedback.style.color = "lightgreen";
-  } else {
-    feedback.textContent = "Wrong";
-    feedback.style.color = "red";
+  async initialize() {
+    await this.loadQuestionTemplates();
+    this.setupEventListeners();
+    this.startTimers();
+    this.initializeTableAndQuestion();
   }
-});
 
-document.getElementById("answerInput").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    document.getElementById("submitAnswerButton").click();
+  async loadQuestionTemplates() {
+    try {
+      const response = await fetch('q.json');
+      state.questionTemplates = await response.json();
+    } catch (error) {
+      console.error('Error loading q.json:', error);
+      alert('Could not load q.json.');
+    }
   }
-});
 
-function formatTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  setupEventListeners() {
+    document
+      .getElementById('questionButton')
+      .addEventListener('click', () => this.generateNewQuestion());
+
+    document
+      .getElementById('answerButton')
+      .addEventListener('click', () => this.uiController.showAnswer());
+
+    document
+      .getElementById('randomizeButton')
+      .addEventListener('click', () => this.handleRandomize());
+
+    document
+      .getElementById('submitAnswerButton')
+      .addEventListener('click', () => this.handleSubmit());
+
+    this.uiController.elements.answerInput.addEventListener(
+      'keypress',
+      (e) => {
+        if (e.key === 'Enter') this.handleSubmit();
+      }
+    );
+  }
+
+  startTimers() {
+    setInterval(() => this.uiController.updateTotalTime(), 1000);
+  }
+
+  initializeTableAndQuestion() {
+    this.randomizeTable();
+    this.generateNewQuestion();
+  }
+
+  randomizeTable() {
+    const data = this.dataManager.randomize();
+    state.tableData = data;
+    this.tableRenderer.render(data);
+  }
+
+  generateNewQuestion() {
+    const result = this.questionGenerator.generate();
+    if (result) {
+      this.uiController.displayQuestion(result.question, result.answer);
+    }
+  }
+
+  handleRandomize() {
+    this.randomizeTable();
+    this.generateNewQuestion();
+  }
+
+  handleSubmit() {
+    const userAnswer = this.uiController.getUserAnswer();
+    const isCorrect = AnswerValidator.isCorrect(
+      userAnswer,
+      state.currentAnswer
+    );
+
+    state.totalAttempts++;
+    if (isCorrect) state.correctCount++;
+
+    this.uiController.updateScore();
+    this.uiController.showFeedback(isCorrect);
+
+    const now = Date.now();
+    if (state.lastSubmitTime) {
+      const elapsedSeconds = (now - state.lastSubmitTime) / 1000;
+      this.uiController.updateLastTime(elapsedSeconds);
+    }
+    state.lastSubmitTime = now;
+  }
 }
 
-setInterval(() => {
-  const now = Date.now();
-  const totalSec = (now - pageStartTime) / 1000;
-  document.getElementById("total-time").textContent =
-    "Total time spent: " + formatTime(totalSec);
-}, 1000);
-
-randomizeTableData();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => new QuizApp());
+} else {
+  new QuizApp();
+}
