@@ -1,23 +1,23 @@
 const CONFIG = {
   TABLE: {
-    NAMES: ['A', 'B', 'C', 'D'],
-    NUMBER_COLUMNS: ['1', '2'],
-    PERCENT_COLUMNS: ['x1', 'y1', 'x2', 'y2'],
+    NAMES: ["A", "B", "C", "D"],
+    NUMBER_COLUMNS: ["1", "2"],
+    PERCENT_COLUMNS: ["x1", "y1", "x2", "y2"],
     MAX_VALUE: 1000,
     MAX_PERCENT: 100,
   },
   HEADERS: [
-    'Name',
-    '1',
-    'X1<br>(%)',
-    'Y1<br>(%)',
-    '2',
-    'X2<br>(%)',
-    'Y2<br>(%)',
+    "Name",
+    "1",
+    "X1<br>(%)",
+    "Y1<br>(%)",
+    "2",
+    "X2<br>(%)",
+    "Y2<br>(%)",
   ],
   COLORS: {
-    CORRECT: 'lightgreen',
-    INCORRECT: 'red',
+    CORRECT: "lightgreen",
+    INCORRECT: "red",
   },
 };
 
@@ -30,6 +30,7 @@ const state = {
   lastSubmitTime: null,
   correctCount: 0,
   totalAttempts: 0,
+  currentQuestionSubmitted: false,
 };
 
 class TableDataManager {
@@ -44,10 +45,10 @@ class TableDataManager {
 
       return {
         name,
-        '1': Math.floor(Math.random() * CONFIG.TABLE.MAX_VALUE),
+        1: Math.floor(Math.random() * CONFIG.TABLE.MAX_VALUE),
         x1,
         y1: CONFIG.TABLE.MAX_PERCENT - x1,
-        '2': Math.floor(Math.random() * CONFIG.TABLE.MAX_VALUE),
+        2: Math.floor(Math.random() * CONFIG.TABLE.MAX_VALUE),
         x2,
         y2: CONFIG.TABLE.MAX_PERCENT - x2,
       };
@@ -97,7 +98,7 @@ class TableRenderer {
   }
 
   buildHeaderRow() {
-    const headers = CONFIG.HEADERS.map((h) => `<th>${h}</th>`).join('');
+    const headers = CONFIG.HEADERS.map((h) => `<th>${h}</th>`).join("");
     return `<tr>${headers}</tr>`;
   }
 
@@ -106,16 +107,16 @@ class TableRenderer {
       .map((row) => {
         const cells = `
           <td>${row.name}</td>
-          <td>${row['1']}</td>
+          <td>${row["1"]}</td>
           <td>${row.x1}</td>
           <td>${row.y1}</td>
-          <td>${row['2']}</td>
+          <td>${row["2"]}</td>
           <td>${row.x2}</td>
           <td>${row.y2}</td>
         `;
         return `<tr>${cells}</tr>`;
       })
-      .join('');
+      .join("");
   }
 }
 
@@ -132,15 +133,15 @@ class QuestionGenerator {
     const vars = {};
 
     variableNames.forEach((varName) => {
-      if (varName.startsWith('letter')) {
+      if (varName.startsWith("letter")) {
         vars[varName] = QuestionGenerator.pickRandom(CONFIG.TABLE.NAMES);
       }
-      if (varName === 'number') {
+      if (varName === "number") {
         vars[varName] = QuestionGenerator.pickRandom(
           CONFIG.TABLE.NUMBER_COLUMNS
         );
       }
-      if (varName === 'percent') {
+      if (varName === "percent") {
         vars[varName] = QuestionGenerator.pickRandom(
           CONFIG.TABLE.PERCENT_COLUMNS
         );
@@ -156,28 +157,28 @@ class QuestionGenerator {
 
   calculateAnswer(type, vars) {
     switch (type) {
-      case 'valueOfPercent':
+      case "valueOfPercent":
         return this.calculateValueOfPercent(vars);
 
-      case 'highestPercentValue':
+      case "highestPercentValue":
         return this.findHighestPercentValue(vars);
 
-      case 'lowestPercentValue':
+      case "lowestPercentValue":
         return this.findLowestPercentValue(vars);
 
-      case 'averageOfNumber':
+      case "averageOfNumber":
         return this.calculateAverageOfNumber(vars);
 
-      case 'highestTotalSum':
+      case "highestTotalSum":
         return this.findHighestTotalSum();
 
-      case 'lowestTotalSum':
+      case "lowestTotalSum":
         return this.findLowestTotalSum();
 
-      case 'averageOfLetter':
+      case "averageOfLetter":
         return this.calculateAverageOfLetter(vars);
 
-      case 'percentageContribution':
+      case "percentageContribution":
         return this.calculatePercentageContribution(vars);
 
       default:
@@ -194,13 +195,10 @@ class QuestionGenerator {
   }
 
   getBaseColumnForPercent(percentColumn) {
-    if (
-      percentColumn.startsWith('x') ||
-      percentColumn.startsWith('y')
-    ) {
+    if (percentColumn.startsWith("x") || percentColumn.startsWith("y")) {
       return percentColumn.charAt(percentColumn.length - 1);
     }
-    return '1';
+    return "1";
   }
 
   findHighestPercentValue(vars) {
@@ -251,14 +249,14 @@ class QuestionGenerator {
     return CONFIG.TABLE.NAMES.map((name) => ({
       name,
       total:
-        this.dataManager.getValue(name, '1') +
-        this.dataManager.getValue(name, '2'),
+        this.dataManager.getValue(name, "1") +
+        this.dataManager.getValue(name, "2"),
     }));
   }
 
   calculateAverageOfLetter(vars) {
-    const val1 = this.dataManager.getValue(vars.letter, '1');
-    const val2 = this.dataManager.getValue(vars.letter, '2');
+    const val1 = this.dataManager.getValue(vars.letter, "1");
+    const val2 = this.dataManager.getValue(vars.letter, "2");
     return Math.round((val1 + val2) / 2);
   }
 
@@ -269,7 +267,7 @@ class QuestionGenerator {
       0
     );
 
-    if (totalOfColumn === 0) return '0%';
+    if (totalOfColumn === 0) return "0%";
 
     const percentage = Math.round((letterValue / totalOfColumn) * 100);
     return `${percentage}%`;
@@ -277,7 +275,7 @@ class QuestionGenerator {
 
   generate() {
     if (!state.questionTemplates.length || !this.dataManager.getData().length) {
-      console.warn('Cannot generate question: missing templates or data');
+      console.warn("Cannot generate question: missing templates or data");
       return null;
     }
 
@@ -300,13 +298,13 @@ class QuestionGenerator {
 class UIController {
   constructor() {
     this.elements = {
-      questionDisplay: document.querySelector('.questions'),
-      answerInput: document.getElementById('answerInput'),
-      feedback: document.getElementById('feedback'),
+      questionDisplay: document.querySelector(".questions"),
+      answerInput: document.getElementById("answerInput"),
+      feedback: document.getElementById("feedback"),
       answerDiv: null,
-      score: document.getElementById('score'),
-      lastTime: document.getElementById('last-time'),
-      totalTime: document.getElementById('total-time'),
+      score: document.getElementById("score"),
+      lastTime: document.getElementById("last-time"),
+      totalTime: document.getElementById("total-time"),
     };
   }
 
@@ -321,26 +319,26 @@ class UIController {
   }
 
   updateAnswerElement() {
-    this.elements.answerDiv = document.getElementById('answer');
+    this.elements.answerDiv = document.getElementById("answer");
   }
 
   clearInput() {
-    this.elements.answerInput.value = '';
+    this.elements.answerInput.value = "";
   }
 
   clearFeedback() {
-    this.elements.feedback.textContent = '';
-    this.elements.feedback.style.color = '';
+    this.elements.feedback.textContent = "";
+    this.elements.feedback.style.color = "";
   }
 
   showAnswer() {
     if (this.elements.answerDiv) {
-      this.elements.answerDiv.style.display = 'block';
+      this.elements.answerDiv.style.display = "block";
     }
   }
 
   showFeedback(isCorrect) {
-    this.elements.feedback.textContent = isCorrect ? 'Correct.' : 'Wrong';
+    this.elements.feedback.textContent = isCorrect ? "Correct." : "Wrong";
     this.elements.feedback.style.color = isCorrect
       ? CONFIG.COLORS.CORRECT
       : CONFIG.COLORS.INCORRECT;
@@ -366,9 +364,9 @@ class UIController {
   formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(
+    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(
       2,
-      '0'
+      "0"
     )}`;
   }
 
@@ -378,20 +376,20 @@ class UIController {
 }
 
 class AnswerValidator {
-  static normalize(answer) {
-    if (answer == null) return '';
+  static normalize(answer, expectedHasPercent = false) {
+    if (answer == null) return "";
 
     let normalized = String(answer).trim().toLowerCase();
-    normalized = normalized.replace(/,/g, '');
+    normalized = normalized.replace(/,/g, "");
 
-    if (normalized.endsWith('%')) {
-      const num = parseFloat(normalized.replace('%', ''));
-      if (isNaN(num)) return normalized;
-      return `${Math.abs(num)}%`;
+    const num = parseFloat(normalized.replace("%", ""));
+    if (!isNaN(num)) {
+      if (expectedHasPercent) {
+        return `${Math.abs(num)}%`;
+      } else {
+        return Math.abs(num);
+      }
     }
-
-    const num = parseFloat(normalized);
-    if (!isNaN(num)) return Math.abs(num);
 
     return normalized;
   }
@@ -406,7 +404,7 @@ class AnswerValidator {
 class QuizApp {
   constructor() {
     this.dataManager = new TableDataManager();
-    this.tableRenderer = new TableRenderer('table');
+    this.tableRenderer = new TableRenderer("table");
     this.questionGenerator = new QuestionGenerator(this.dataManager);
     this.uiController = new UIController();
     this.initialize();
@@ -421,37 +419,34 @@ class QuizApp {
 
   async loadQuestionTemplates() {
     try {
-      const response = await fetch('q.json');
+      const response = await fetch("q.json");
       state.questionTemplates = await response.json();
     } catch (error) {
-      console.error('Error loading q.json:', error);
-      alert('Could not load q.json.');
+      console.error("Error loading q.json:", error);
+      alert("Could not load q.json.");
     }
   }
 
   setupEventListeners() {
     document
-      .getElementById('questionButton')
-      .addEventListener('click', () => this.generateNewQuestion());
+      .getElementById("questionButton")
+      .addEventListener("click", () => this.generateNewQuestion());
 
     document
-      .getElementById('answerButton')
-      .addEventListener('click', () => this.uiController.showAnswer());
+      .getElementById("answerButton")
+      .addEventListener("click", () => this.uiController.showAnswer());
 
     document
-      .getElementById('randomizeButton')
-      .addEventListener('click', () => this.handleRandomize());
+      .getElementById("randomizeButton")
+      .addEventListener("click", () => this.handleRandomize());
 
     document
-      .getElementById('submitAnswerButton')
-      .addEventListener('click', () => this.handleSubmit());
+      .getElementById("submitAnswerButton")
+      .addEventListener("click", () => this.handleSubmit());
 
-    this.uiController.elements.answerInput.addEventListener(
-      'keypress',
-      (e) => {
-        if (e.key === 'Enter') this.handleSubmit();
-      }
-    );
+    this.uiController.elements.answerInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") this.handleSubmit();
+    });
   }
 
   startTimers() {
@@ -473,6 +468,8 @@ class QuizApp {
     const result = this.questionGenerator.generate();
     if (result) {
       this.uiController.displayQuestion(result.question, result.answer);
+
+      state.currentQuestionSubmitted = false;
     }
   }
 
@@ -482,6 +479,8 @@ class QuizApp {
   }
 
   handleSubmit() {
+    if (state.currentQuestionSubmitted) return;
+
     const userAnswer = this.uiController.getUserAnswer();
     const isCorrect = AnswerValidator.isCorrect(
       userAnswer,
@@ -500,11 +499,13 @@ class QuizApp {
       this.uiController.updateLastTime(elapsedSeconds);
     }
     state.lastSubmitTime = now;
+
+    state.currentQuestionSubmitted = true;
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => new QuizApp());
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => new QuizApp());
 } else {
   new QuizApp();
 }
